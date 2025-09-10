@@ -46,7 +46,7 @@ int get_socket_error_code(int socket)
 int show_socket_error_reason(int socket)
 {
 	int err = get_socket_error_code(socket);
-	printf("UDP socket error %d %s", err, strerror(err));
+	printf("UDP socket error %d %s\n", err, strerror(err));
 	return err;
 }
 
@@ -57,15 +57,6 @@ void udp_logging_free()
 		int err = 0;
 		char *err_buf;
 		esp_log_set_vprintf(vprintf);
-		if ((err = shutdown(udp_log_fd, 2)) == 0)
-		{
-			printf("\nUDP socket shutdown!");
-		}
-		else
-		{
-			asprintf(&err_buf, "\nShutting-down UDP socket failed: %d!\n", err);
-			printf(err_buf);
-		}
 
 		if ((err = close(udp_log_fd)) == 0)
 		{
@@ -76,6 +67,7 @@ void udp_logging_free()
 			asprintf(&err_buf, "\n Closing UDP socket failed: %d!\n", err);
 			printf(err_buf);
 		}
+		shutdown(udp_log_fd, 2);
 		udp_log_fd = 0;
 	}
 }
@@ -94,9 +86,9 @@ int udp_logging_vprintf(const char *str, va_list l)
 		if ((err = sendto(udp_log_fd, buf, len, 0, (struct sockaddr *)&serveraddr, sizeof(serveraddr))) < 0)
 		{
 			show_socket_error_reason(udp_log_fd);
-			vprintf("\nFreeing UDP Logging. sendto failed!\n", l);
-			udp_logging_free(l);
-			return vprintf("UDP Logging freed!\n\n", l);
+			printf("\nSend failed!\n");
+			udp_logging_free();
+			return printf("UDP Logging freed!\n");
 		}
 	}
 	return vprintf(str, l);
@@ -117,6 +109,7 @@ int udp_logging_init(const char *node, const char *service, vprintf_like_t func)
 	if (rc != 0)
 	{
 		ESP_LOGI(TAG, "Host not found! (%s)", node);
+		return -1;
 	}
 	memcpy(&serveraddr, res->ai_addr, sizeof(serveraddr));
 	family = res->ai_addr->sa_family;
@@ -127,7 +120,7 @@ int udp_logging_init(const char *node, const char *service, vprintf_like_t func)
 		return -1;
 	}
 
-	ESP_LOGI(TAG, "Logging to %s", node);
+	ESP_LOGI(TAG, "Logging to %s:%s", node, service);
 
 	int err = setsockopt(udp_log_fd, SOL_SOCKET, SO_SNDTIMEO, (const char *)&send_timeout, sizeof(send_timeout));
 	if (err < 0)
@@ -136,6 +129,6 @@ int udp_logging_init(const char *node, const char *service, vprintf_like_t func)
 	}
 
 	esp_log_set_vprintf(func);
-
+	
 	return 0;
 }
