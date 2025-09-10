@@ -26,7 +26,7 @@
 #include "lwip/dns.h"
 #include "freertos/task.h"
 static const char *TAG = "udp_logging";
-int udp_log_fd;
+int udp_log_fd = 0;
 static struct sockaddr serveraddr;
 static struct addrinfo hints;
 static uint8_t buf[UDP_LOGGING_MAX_PAYLOAD_LEN];
@@ -50,7 +50,7 @@ int show_socket_error_reason(int socket)
 	return err;
 }
 
-void udp_logging_free(va_list l)
+void udp_logging_free()
 {
 	if (udp_log_fd != 0)
 	{
@@ -59,22 +59,22 @@ void udp_logging_free(va_list l)
 		esp_log_set_vprintf(vprintf);
 		if ((err = shutdown(udp_log_fd, 2)) == 0)
 		{
-			vprintf("\nUDP socket shutdown!", l);
+			printf("\nUDP socket shutdown!");
 		}
 		else
 		{
 			asprintf(&err_buf, "\nShutting-down UDP socket failed: %d!\n", err);
-			vprintf(err_buf, l);
+			printf(err_buf);
 		}
 
 		if ((err = close(udp_log_fd)) == 0)
 		{
-			vprintf("\nUDP socket closed!", l);
+			printf("\nUDP socket closed!");
 		}
 		else
 		{
 			asprintf(&err_buf, "\n Closing UDP socket failed: %d!\n", err);
-			vprintf(err_buf, l);
+			printf(err_buf);
 		}
 		udp_log_fd = 0;
 	}
@@ -105,7 +105,7 @@ int udp_logging_vprintf(const char *str, va_list l)
 int udp_logging_init(const char *node, const char *service, vprintf_like_t func)
 {
 	struct timeval send_timeout = {1, 0};
-	udp_log_fd = 0;
+	udp_logging_free();
 	ESP_LOGI(TAG, "initializing udp logging...");
 
 	memset(&hints, 0, sizeof(hints));

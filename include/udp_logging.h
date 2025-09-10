@@ -28,7 +28,7 @@ extern int udp_log_fd;
 
 int udp_logging_init(const char *node, const char *service, vprintf_like_t func);
 int udp_logging_vprintf( const char *str, va_list l );
-void udp_logging_free(va_list l);
+void udp_logging_free();
 
 #ifdef __cplusplus
 }
